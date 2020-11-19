@@ -1,9 +1,9 @@
 import socket
 
-from ethernet import IP_ETH_TYPE
+from ethernet import ETH_TYPE_IP
 from ethernet import EthernetFrame
+from icmp import IcmpDatagram
 from structs import IpPacket
-from structs import IcmpDatagram
 from structs import TcpSegment
 from structs import UdpDatagram
 
@@ -13,7 +13,7 @@ def main():
     sock = socket.socket(
         family=socket.AF_PACKET,
         type=socket.SOCK_RAW,
-        proto=IP_ETH_TYPE,
+        proto=socket.htons(ETH_TYPE_IP),
     )
     
     while True:
