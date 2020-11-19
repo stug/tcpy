@@ -3,7 +3,7 @@ import socket
 from ethernet import ETH_TYPE_IP
 from ethernet import EthernetFrame
 from icmp import IcmpDatagram
-from structs import IpPacket
+from ip import IpPacket
 from structs import TcpSegment
 from structs import UdpDatagram
 

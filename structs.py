@@ -5,64 +5,6 @@ from dataclasses import field
 
 
 @dataclass
-class IpPacket:
-    HEADER_FORMAT = '!BBH2sHBBHLL'
-
-    version: int
-    ihl: int
-    dscp: int
-    ecn: int
-    total_length: int
-    identification: bytes
-    flags: int
-    fragment_offset: int
-    ttl: int
-    protocol: int
-    header_checksum: int
-    source_ip: int
-    destination_ip: int
-    payload: bytes = field(repr=False)
-
-    @classmethod
-    def from_raw(cls, raw_packet):
-        # this assumes ihl = 5 (for 5 4-byte words), which it should almost always be
-        header = raw_packet[0:20]  
-        header_fields = struct.unpack(cls.HEADER_FORMAT, header)
-
-        version = header_fields[0] >> 4
-        ihl = header_fields[0] & 0x0F
-        assert ihl == 5, f'Cannot handle IP packets with ihl != 5 (got {ihl}).'
-
-        dscp = header_fields[1] >> 2
-        ecn = header_fields[1] & 0x03
-
-        total_length = header_fields[2]
-
-        flags = header_fields[4] >> 15
-        fragment_offset = header_fields[4] & 0x1FFF
-
-        return cls(
-            version=version,
-            ihl=ihl,
-            dscp=dscp,
-            ecn=ecn,
-            total_length=total_length,
-            identification=header_fields[3],
-            flags=flags,
-            fragment_offset=fragment_offset,
-            ttl=header_fields[5],
-            protocol=header_fields[6],
-            header_checksum=header_fields[7],
-            source_ip=header_fields[8],
-            destination_ip=header_fields[9],
-            payload=raw_packet[21 : total_length],
-        )
-
-    def to_raw(self):
-        raise NotImplementedError
-
-
-@dataclass
 class TcpSegment:
     # omits the options field since its length is variable and we need to parse
     # the data offset field to know how big it is
