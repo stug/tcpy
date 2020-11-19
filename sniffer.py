@@ -1,9 +1,7 @@
 import socket
-import struct
-from dataclasses import dataclass
 
-from structs import IP_ETH_TYPE
-from structs import EthernetFrame
+from ethernet import IP_ETH_TYPE
+from ethernet import EthernetFrame
 from structs import IpPacket
 from structs import IcmpDatagram
 from structs import TcpSegment
