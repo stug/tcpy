@@ -16,13 +16,13 @@ IFNAMSIZ = 16
 
 
 def human_readable_ip_from_int(ip_int):
-    # convert back to network byte order first so that the octets are in the expected order
+    # convert back to network byte order first so that the octets are in the
+    # expected order
     ip_int = socket.ntohl(ip_int)
     octets = []
     for _ in range(4):
         octets.append(str(ip_int & 0xFF))
         ip_int = ip_int >> 8
-    # reverse because x86 is little endian and network order is big endian
     return '.'.join(octets)
 
 
