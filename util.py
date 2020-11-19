@@ -1,4 +1,18 @@
+import fcntl
 import socket
+import struct
+
+
+# ioctl command to Get InterFace HardWare ADDRess. See `man 2 ioctl_list` and
+# `man 7 netdevice`
+SIOCGIFHWADDR = 0x00008927
+
+# ioctl command to Get InterFace ADDR
+SIOCGIFADDR = 0x00008915
+
+# this is the length of interface names dealt with by the kernel. It's defined
+# in the if.h kernel header -- not sure if it varies with architecture.
+IFNAMSIZ = 16
 
 
 def human_readable_ip_from_int(ip_int):
@@ -23,7 +37,7 @@ def human_readable_ip_to_int(ip_address):
     return ip
 
 
-def get_gateway_ip():
+def get_default_route_info():
     # this requires root
     # adapted from https://stackoverflow.com/questions/2761829/python-get-default-gateway-for-a-local-interface-ip-address-in-linux
     with open('/proc/net/route') as f:
@@ -32,7 +46,37 @@ def get_gateway_ip():
             # fields[1] is the destination, so all 0 means the default route.
             # fields[3] is the flags field, and the 2s bit is the RTF_GATEWAY flag
             if fields[1] == '00000000' and int(fields[3]) & 2 != 0:
-                # unfortunately /proc/net/route has the gateway as hex string 
-                # (in little endian representation)
+                interface = fields[0]
+                # /proc/net/route has the gateway as little-endian hex string
                 gateway_hex = fields[2]
-                return socket.htonl(int(gateway_hex, 16))
+                gateway_ip = socket.htonl(int(gateway_hex, 16))
+                return interface, gateway_ip
+
+
+def get_ip(interface):
+    interface_ascii = interface.encode('ascii')
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        # `man 7 netdevice` explains this struct and ioctl request
+        info = fcntl.ioctl(
+            sock.fileno(),
+            SIOCGIFADDR,
+            struct.pack('24s', interface_ascii[:IFNAMSIZ]),
+        )
+        # fields are interface name, socket family, 2 bytes of padding that I'm
+        # not sure the reason for, ip address (big endian)
+        fields = struct.unpack(f'{IFNAMSIZ}s2s2s4s', info)
+        return int.from_bytes(fields[3], byteorder='big')
+
+
+def get_mac(interface):
+    interface_ascii = interface.encode('ascii')
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        # `man 7 netdevice` explains this struct and ioctl request
+        info = fcntl.ioctl(
+            sock.fileno(),
+            SIOCGIFHWADDR,
+            struct.pack('24s', interface_ascii[:IFNAMSIZ]),
+        )
+        # fields are interface name, socket family, mac address (big endian)
+        fields = struct.unpack(f'{IFNAMSIZ}s2s6s', info)
+        return int.from_bytes(fields[2], byteorder='big')
