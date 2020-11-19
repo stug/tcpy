@@ -9,10 +9,6 @@ from dataclasses import field
 IP_ETH_TYPE = socket.htons(0x0800)
 
 
-def human_readable_ip_from_bytes(ip_bytes):
-    return f'{ip_bytes[0]}.{ip_bytes[1]}.{ip_bytes[2]}.{ip_bytes[3]}'
-
-
 @dataclass
 class EthernetFrame:
     HEADER_FORMAT = '!6s6sH'
@@ -39,7 +35,7 @@ class EthernetFrame:
 
 @dataclass
 class IpPacket:
-    HEADER_FORMAT = '!BBH2sHBBH4s4s'
+    HEADER_FORMAT = '!BBH2sHBBHLL'
 
     version: int
     ihl: int
@@ -52,8 +48,8 @@ class IpPacket:
     ttl: int
     protocol: int
     header_checksum: int
-    source_ip: bytes
-    destination_ip: bytes
+    source_ip: int
+    destination_ip: int
     payload: bytes = field(repr=False)
 
     @classmethod
