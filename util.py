@@ -80,3 +80,13 @@ def get_mac(interface):
         # fields are interface name, socket family, mac address (big endian)
         fields = struct.unpack(f'{IFNAMSIZ}s2s6s', info)
         return int.from_bytes(fields[2], byteorder='big')
+
+
+def checksum(byte_string):
+    checksum = 0
+    as_int = int.from_bytes(byte_string, byteorder='big')
+    while as_int > 0:
+        checksum += as_int & 0xFFFF
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        as_int = as_int >> 16
+    return ~checksum & 0xFFFF
