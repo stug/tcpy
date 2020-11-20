@@ -37,6 +37,9 @@ def human_readable_ip_to_int(ip_address):
     return ip
 
 
+# TODO: everything from here on down in this file could do with some caching
+
+
 def get_default_route_info():
     # this requires root
     # adapted from https://stackoverflow.com/questions/2761829/python-get-default-gateway-for-a-local-interface-ip-address-in-linux

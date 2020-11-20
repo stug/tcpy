@@ -2,7 +2,6 @@ import socket
 import sys
 import time
 
-from ethernet import arp_lookup_for_ip
 from ethernet import EthernetFrame
 from ethernet import ETH_P_ALL
 from ethernet import ETH_TYPE_IP
@@ -10,7 +9,9 @@ from icmp import ICMP_TYPE_ECHO_REPLY
 from icmp import ICMP_TYPE_ECHO_REQUEST
 from icmp import IcmpDatagram
 from icmp import IcmpEchoRequestHeaderFields
+from ip import send_ip_packet
 from ip import IpPacket
+from ip import IP_FLAGS_DONT_FRAGMENT
 from util import get_default_route_info
 from util import get_ip
 from util import get_mac
@@ -29,10 +30,6 @@ def ping(host):
 
     destination_host_ip = human_readable_ip_to_int(host)
 
-    source_mac = get_mac(default_interface)
-    source_ip = get_ip(default_interface)
-    gateway_mac = arp_lookup_for_ip(sock, gateway_ip, source_mac, source_ip)
-
     request_icmp_datagram = IcmpDatagram(
         type=ICMP_TYPE_ECHO_REQUEST,
         code=0,
@@ -41,23 +38,18 @@ def ping(host):
         ).to_raw(),
         payload=int(time.time() * 1000).to_bytes(32, byteorder='big'),
     )
-    request_ip_packet = IpPacket(
-        protocol=socket.IPPROTO_ICMP,
-        source_ip=get_ip(default_interface),
-        destination_ip=destination_host_ip,
-        flags=0b010,  # don't fragment
-        payload=request_icmp_datagram.to_raw(),
-    )
-    request_ethernet_frame = EthernetFrame(
-        destination_mac=gateway_mac,
-        source_mac=source_mac,
-        ethertype=ETH_TYPE_IP,
-        payload=request_ip_packet.to_raw(),
-    )
 
     print('PING!')
-    sock.send(request_ethernet_frame.to_raw())
+    send_ip_packet(
+        sock=sock,
+        protocol=socket.IPPROTO_ICMP,
+        destination_ip=destination_host_ip,
+        flags=IP_FLAGS_DONT_FRAGMENT,
+        payload=request_icmp_datagram.to_raw()
+    )
 
+    # TODO: make a wait_for function that lets us wait for packets of a certain
+    # type
     while True:
         raw_frame, address = sock.recvfrom(65536)
         parsed_frame = EthernetFrame.from_raw(raw_frame)

@@ -3,7 +3,16 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
+from ethernet import arp_lookup_for_ip
+from ethernet import send_ethernet_frame
+from ethernet import ETH_TYPE_IP
 from util import checksum
+from util import get_default_route_info
+from util import get_ip
+from util import get_mac
+
+
+IP_FLAGS_DONT_FRAGMENT = 0b010
 
 
 @dataclass
@@ -95,3 +104,20 @@ class IpPacket:
     def to_raw(self):
         # payload expected to be raw bytes in network order
         return self._pack_header() + self.payload
+
+
+def send_ip_packet(sock, protocol, destination_ip, payload, flags=None):
+    # TODO: this could maybe do longest prefix match to choose an interface
+    # although then we would have to bind the socket here
+    default_interface, gateway_ip = get_default_route_info()
+    source_ip = get_ip(default_interface)
+    gateway_mac = arp_lookup_for_ip(sock=sock, ip=gateway_ip)
+
+    packet = IpPacket(
+        protocol=protocol,
+        source_ip=source_ip,
+        destination_ip=destination_ip,
+        flags=flags,
+        payload=payload,
+    )
+    send_ethernet_frame(sock, ETH_TYPE_IP, gateway_mac, packet.to_raw())
