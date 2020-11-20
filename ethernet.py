@@ -143,4 +143,5 @@ def arp_lookup_for_ip(sock, ip, source_mac, source_ip):
         parsed_frame = EthernetFrame.from_raw(raw_frame)
         if parsed_frame.ethertype == ETH_TYPE_ARP:
             parsed_arp_packet = ArpPacket.from_raw(parsed_frame.payload)
-            return parsed_arp_packet.sender_hardware_address
+            if parsed_arp_packet.sender_protocol_address == ip:
+                return parsed_arp_packet.sender_hardware_address
