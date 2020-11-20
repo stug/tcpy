@@ -31,6 +31,9 @@ class EthernetFrame:
     ethertype: int
     payload: bytes = field(repr=False)
 
+    # TODO: for some reason we don't have to provide the CRC -- is that done in
+    # hardware or the kernel?
+
     @classmethod
     def from_raw(cls, raw_frame):
         header = raw_frame[0:14]
@@ -116,12 +119,8 @@ class ArpPacket:
         )
 
 
-def arp_lookup_for_ip(sock, ip):
+def arp_lookup_for_ip(sock, ip, source_mac, source_ip):
     """sock must be a RAW AF_PACKET socket.  ip must be an int"""
-    interface, gateway_ip = get_default_route_info()
-    source_mac = get_mac(interface)
-    source_ip = get_ip(interface)
-
     arp_packet = ArpPacket(
         operation=ARP_OPERATION_REQUEST,
         sender_hardware_address=source_mac,

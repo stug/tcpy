@@ -59,7 +59,7 @@ class IpPacket:
             header_checksum=header_fields[7],
             source_ip=header_fields[8],
             destination_ip=header_fields[9],
-            payload=raw_packet[21 : total_length],
+            payload=raw_packet[20 : total_length],
         )
 
     def __post_init__(self):
@@ -76,7 +76,7 @@ class IpPacket:
     def _pack_header(self):
         version_ihl = (self.version << 4) + self.ihl
         dscp_ecn = (self.dscp << 2) + self.ecn
-        flags_fragment_offset = (self.flags << 15) + self.fragment_offset
+        flags_fragment_offset = (self.flags << 13) + self.fragment_offset
 
         return struct.pack(
             self.HEADER_FORMAT,
