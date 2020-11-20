@@ -1,5 +1,6 @@
 import socket
 
+from dns import DnsPacket
 from ethernet import ETH_TYPE_IP
 from ethernet import EthernetFrame
 from icmp import IcmpDatagram
@@ -34,6 +35,9 @@ def main():
             elif parsed_ip_packet.protocol == socket.IPPROTO_UDP:
                 parsed_udp_datagram = UdpDatagram.from_raw(parsed_ip_packet.payload)
                 print(parsed_udp_datagram)
+                if parsed_udp_datagram.destination_port == 53:
+                    parsed_dns_packet = DnsPacket.from_raw(parsed_udp_datagram.payload)
+                    print(parsed_dns_packet)
             else:
                 print(f'Got unsupported IP Protocol: {parsed_ip_packet.protocol}')
                 print(f'Raw payload: {parsed_ip_packet.payload}')
