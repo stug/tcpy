@@ -52,6 +52,15 @@ class DnsPacket:
             question, index = DnsQuestionSection.from_raw(raw_packet, index)
             questions.append(question)
 
+        ancount = header_fields[4]
+        answers, index = parse_resource_records(raw_packet, ancount, index)
+
+        nscount = header_fields[5]
+        authorities, index = parse_resource_records(raw_packet, nscount, index)
+
+        arcount = header_fields[6]
+        additional, index = parse_resource_records(raw_packet, arcount, index)
+
         return cls(
             id=header_fields[0],
             qr=qr,
@@ -62,51 +71,62 @@ class DnsPacket:
             ra=ra,
             rcode=rcode,
             qdcount=qdcount,
-            ancount=header_fields[4],
-            nscount=header_fields[5],
-            arcount=header_fields[6],
+            ancount=ancount,
+            nscount=nscount,
+            arcount=arcount,
             questions=questions,
-            answers=[],
-            authorities=[],
-            additional=[],
+            answers=answers,
+            authorities=authorities,
+            additional=additional,
         )
 
     def to_raw(self):
         raise NotImplementedError
 
 
+def parse_resource_records(raw_dns_packet, count, index):
+    records = []
+    for _ in range(count):
+        resource_record, index = DnsResourceRecord.from_raw(raw_dns_packet, index)
+        records.append(resource_record)
+    return records, index
+
+
 def parse_dns_name(raw_dns_packet, index):
+    # A tricky thing here is that pointers are two-octet sequences whose first
+    # two bits are 1s, whereas other labels are identified by a one-octet length
+    # specifier starting with two 0's. So how many octets we look at depends on
+    # the first two bits we see.
+    # Also, the two conditions that end parsing are 1) hitting a null byte,
+    # which signifies the end of a sequence of labels, and 2) hitting a pointer,
+    # which redirects us to another set of labels elsewhere, which we follow
+    # to their end -- we actually recurse in this case.
     labels = []
     while True:
-        label, index = parse_dns_label(raw_dns_packet, index)
-        if label is None:
+        # weirdly, even though raw_dns_packet has type bytes, accessing a single
+        # octet returns an int
+        is_pointer = (raw_dns_packet[index] >> 6) == 0b11
+        if is_pointer:
+            [pointer_index] = struct.unpack('!H', raw_dns_packet[index: index+2])
+            pointer_index = pointer_index & 0x3FFF  # zero out the two bit pointer marker
+            index += 2
+            label, _ = parse_dns_name(raw_dns_packet, pointer_index)
+            labels.append(label)
             break
-        labels.append(label)
+        else:
+            label_length = raw_dns_packet[index]
+            index += 1
+            if label_length > 0:
+                label = raw_dns_packet[index: index + label_length]
+                index += label_length
+            else:
+                break
 
     return b'.'.join(labels), index
 
 
-def parse_dns_label(raw_dns_packet, index):
-    # even though raw_dns_packet has type bytes, accessing a single
-    # octet returns an int, weirdly.
-    label_length_or_pointer = raw_dns_packet[index]
-    index += 1
-    is_pointer = (label_length_or_pointer >> 6) == 0b11
-    if is_pointer:
-        pointer_index = label_length_or_pointer & 0x3F
-        label, _ = parse_dns_label(raw_dns_packet, pointer_index)
-    elif label_length_or_pointer > 0:
-        label = raw_dns_packet[index: index + label_length_or_pointer]
-        index = index + label_length_or_pointer
-    else:
-        label = None
-
-    return label, index
-
-
 @dataclass
 class DnsQuestionSection:
-
     record_name: bytes
     record_type: int
     record_class: int
@@ -118,11 +138,44 @@ class DnsQuestionSection:
         # entire DNS packet in case we need to look up a name defined elsewhere
         record_name, index = parse_dns_name(raw_dns_packet, index)
         record_type, record_class = struct.unpack('!HH', raw_dns_packet[index: index+4])
-
         index += 4
+
         question_section = cls(
             record_name=record_name,
             record_type=record_type,
             record_class=record_class
         )
         return question_section, index
+
+    def to_raw(self):
+        raise NotImplementedError
+
+
+@dataclass
+class DnsResourceRecord:
+    record_name: bytes
+    record_type: int
+    record_class: int
+    ttl: int
+    rdlength: int
+    rdata: bytes
+
+    @classmethod
+    def from_raw(cls, raw_dns_packet, index):
+        record_name, index = parse_dns_name(raw_dns_packet, index)
+        record_type, record_class, ttl, rdlength = struct.unpack(
+            '!HHLH',
+            raw_dns_packet[index: index+10]
+        )
+        index += 10
+        rdata = raw_dns_packet[index: index + rdlength]
+        index += rdlength
+        resource_record = cls(
+            record_name=record_name,
+            record_type=record_type,
+            record_class=record_class,
+            ttl=ttl,
+            rdlength=rdlength,
+            rdata=rdata
+        )
+        return resource_record, index
