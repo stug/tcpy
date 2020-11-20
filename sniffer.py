@@ -5,8 +5,8 @@ from ethernet import ETH_TYPE_IP
 from ethernet import EthernetFrame
 from icmp import IcmpDatagram
 from ip import IpPacket
-from structs import TcpSegment
-from structs import UdpDatagram
+from tcp import TcpSegment
+from udp import UdpDatagram
 
 
 def main():

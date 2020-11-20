@@ -1,7 +1,5 @@
-import socket
 import struct
 from dataclasses import dataclass
-from dataclasses import field
 
 
 @dataclass
@@ -58,32 +56,6 @@ class TcpSegment:
             urgent_pointer=header_fields[8],
             options=raw_segment[20:20+options_field_size],
             payload=raw_segment[20+options_field_size:],
-        )
-
-    def to_raw(self):
-        raise NotImplementedError
-
-
-@dataclass
-class UdpDatagram:
-    HEADER_FORMAT = '!HHHH'
-
-    source_port: int
-    destination_port: int
-    length: int
-    checksum: int
-    payload: bytes
-
-    @classmethod
-    def from_raw(cls, raw_datagram):
-        header = raw_datagram[0:8]
-        header_fields = struct.unpack(cls.HEADER_FORMAT, header)
-        return cls(
-            source_port=header_fields[0],
-            destination_port=header_fields[1],
-            length=header_fields[2],
-            checksum=header_fields[3],
-            payload=raw_datagram[8:]
         )
 
     def to_raw(self):
