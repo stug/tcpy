@@ -2,19 +2,16 @@ import socket
 import sys
 import time
 
-from ethernet import EthernetFrame
 from ethernet import ETH_P_ALL
-from ethernet import ETH_TYPE_IP
 from icmp import ICMP_TYPE_ECHO_REPLY
 from icmp import ICMP_TYPE_ECHO_REQUEST
 from icmp import IcmpDatagram
 from icmp import IcmpEchoRequestHeaderFields
+from ip import listen_for_ip_packets
 from ip import send_ip_packet
 from ip import IpPacket
 from ip import IP_FLAGS_DONT_FRAGMENT
 from util import get_default_route_info
-from util import get_ip
-from util import get_mac
 from util import human_readable_ip_to_int
 
 
@@ -47,25 +44,21 @@ def ping(host):
         flags=IP_FLAGS_DONT_FRAGMENT,
         payload=request_icmp_datagram.to_raw()
     )
-
-    # TODO: make a wait_for function that lets us wait for packets of a certain
-    # type
-    while True:
-        raw_frame, address = sock.recvfrom(65536)
-        parsed_frame = EthernetFrame.from_raw(raw_frame)
-        if parsed_frame.ethertype == ETH_TYPE_IP:
-            ip_packet = IpPacket.from_raw(parsed_frame.payload)
-            if ip_packet.protocol == socket.IPPROTO_ICMP:
-                icmp_datagram = IcmpDatagram.from_raw(ip_packet.payload)
-                print('PONG!')
-                original_timestamp = int.from_bytes(
-                    icmp_datagram.payload,
-                    byteorder='big',
-                    signed=False,
-                )
-                duration = int(time.time() * 1000) - original_timestamp
-                print(f'Received reply in {duration} ms')
-                break
+    for packet in listen_for_ip_packets(
+        sock,
+        source_ip=destination_host_ip,
+        protocol=socket.IPPROTO_ICMP,
+    ):
+        icmp_datagram = IcmpDatagram.from_raw(packet.payload)
+        print('PONG!')
+        original_timestamp = int.from_bytes(
+            icmp_datagram.payload,
+            byteorder='big',
+            signed=False,
+        )
+        duration = int(time.time() * 1000) - original_timestamp
+        print(f'Received reply in {duration} ms')
+        break
 
 
 if __name__ == '__main__':

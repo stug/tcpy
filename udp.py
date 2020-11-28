@@ -2,6 +2,8 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
+from ip import send_ip_packet
+
 
 @dataclass
 class UdpDatagram:
@@ -41,3 +43,23 @@ class UdpDatagram:
         )
         # payload expected to already be in network order
         return header + self.payload
+
+
+def send_udp_datagram(
+    sock,
+    source_port,
+    destination_ip,
+    destination_port,
+    payload,
+):
+    datagram = UdpDatagram(
+        source_port=source_port,
+        destination_port=destination_port,
+        payload=payload,
+    )
+    send_ip_packet(
+        sock=sock,
+        protocol=socket.IPPROTO_UDP,
+        destination_ip=destination_ip,
+        payload=datagram.to_raw(),
+    )

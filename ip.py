@@ -5,6 +5,7 @@ from dataclasses import field
 
 from ethernet import arp_lookup_for_ip
 from ethernet import send_ethernet_frame
+from ethernet import EthernetFrame
 from ethernet import ETH_TYPE_IP
 from util import checksum
 from util import get_default_route_info
@@ -121,3 +122,24 @@ def send_ip_packet(sock, protocol, destination_ip, payload, flags=None):
         payload=payload,
     )
     send_ethernet_frame(sock, ETH_TYPE_IP, gateway_mac, packet.to_raw())
+
+
+def listen_for_ip_packets(
+    sock,
+    source_ip=None,
+    destination_ip=None,
+    protocol=None,
+):
+    while True:
+        raw_frame, address = sock.recvfrom(65536)
+        parsed_frame = EthernetFrame.from_raw(raw_frame)
+        if parsed_frame.ethertype != ETH_TYPE_IP:
+            continue
+
+        ip_packet = IpPacket.from_raw(parsed_frame.payload)
+        if source_ip is not None and ip_packet.source_ip != source_ip:
+            continue
+        if protocol is not None and ip_packet.protocol != protocol:
+            continue
+
+        yield ip_packet
