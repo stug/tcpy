@@ -118,6 +118,7 @@ def parse_dns_name(raw_dns_packet, index):
             index += 1
             if label_length > 0:
                 label = raw_dns_packet[index: index + label_length]
+                labels.append(label)
                 index += label_length
             else:
                 break

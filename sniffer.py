@@ -36,7 +36,10 @@ def main():
             elif parsed_ip_packet.protocol == socket.IPPROTO_UDP:
                 parsed_udp_datagram = UdpDatagram.from_raw(parsed_ip_packet.payload)
                 print(parsed_udp_datagram)
-                if parsed_udp_datagram.source_port == 53:
+                if (
+                    parsed_udp_datagram.source_port == 53
+                    or parsed_udp_datagram.destination_port == 53
+                ):
                     parsed_dns_packet = DnsPacket.from_raw(parsed_udp_datagram.payload)
                     print(parsed_dns_packet)
             else:
