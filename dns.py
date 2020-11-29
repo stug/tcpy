@@ -14,6 +14,7 @@ DNS_PORT = 53
 
 DNS_TYPE_A = 0x0001
 DNS_TYPE_CNAME = 0x0005
+DNS_TYPE_PTR = 0x000c
 DNS_CLASS_IN = 0x0001  # internet addresses
 
 
@@ -306,3 +307,9 @@ def get_ip_for_name(sock, name):
         if answer.record_type == DNS_TYPE_A:
             return int.from_bytes(answer.rdata, byteorder='big', signed=False)
     return None
+
+
+def human_readable_ip_to_arpa_domain(ip):
+    octets = ip.split('.')
+    reversed_octet_string = '.'.join(reversed(octets))
+    return f'{reversed_octet_string}.in-addr.arpa'
