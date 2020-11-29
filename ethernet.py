@@ -119,8 +119,24 @@ class ArpPacket:
         )
 
 
-def arp_lookup_for_ip(sock, ip, source_mac, source_ip):
+def send_ethernet_frame(sock, ethertype, destination_mac, payload):
+    interface = sock.getsockname()[0]
+    source_mac = get_mac(interface)
+    frame = EthernetFrame(
+        destination_mac=destination_mac,
+        source_mac=source_mac,
+        ethertype=ethertype,
+        payload=payload,
+    )
+    sock.send(frame.to_raw())
+
+
+# TODO: cache result
+def arp_lookup_for_ip(sock, ip):
     """sock must be a RAW AF_PACKET socket.  ip must be an int"""
+    interface = sock.getsockname()[0]
+    source_mac = get_mac(interface)
+    source_ip = get_ip(interface)
     arp_packet = ArpPacket(
         operation=ARP_OPERATION_REQUEST,
         sender_hardware_address=source_mac,
@@ -128,14 +144,12 @@ def arp_lookup_for_ip(sock, ip, source_mac, source_ip):
         target_hardware_address=0,
         target_protocol_address=ip,
     )
-    ethernet_frame = EthernetFrame(
-        destination_mac=ETHERNET_BROADCAST_ADDRESS,
-        source_mac=source_mac,
+    send_ethernet_frame(
+        sock=sock,
         ethertype=ETH_TYPE_ARP,
-        payload=arp_packet.to_raw()
+        destination_mac=ETHERNET_BROADCAST_ADDRESS,
+        payload=arp_packet.to_raw(),
     )
-    raw_ethernet_frame = ethernet_frame.to_raw()
-    sock.send(raw_ethernet_frame)
 
     # TODO: maybe add some sort of timeout on this
     while True:
@@ -143,4 +157,5 @@ def arp_lookup_for_ip(sock, ip, source_mac, source_ip):
         parsed_frame = EthernetFrame.from_raw(raw_frame)
         if parsed_frame.ethertype == ETH_TYPE_ARP:
             parsed_arp_packet = ArpPacket.from_raw(parsed_frame.payload)
-            return parsed_arp_packet.sender_hardware_address
+            if parsed_arp_packet.sender_protocol_address == ip:
+                return parsed_arp_packet.sender_hardware_address

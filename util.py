@@ -1,4 +1,5 @@
 import fcntl
+import re
 import socket
 import struct
 
@@ -35,6 +36,14 @@ def human_readable_ip_to_int(ip_address):
     # because ip addresses represented as 4 octets are already in network order,
     # we can just return here
     return ip
+
+
+def is_ip_string(string):
+    match = re.match('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', string)
+    return match is not None
+
+
+# TODO: everything from here on down in this file could do with some caching
 
 
 def get_default_route_info():
@@ -90,3 +99,22 @@ def checksum(byte_string):
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         as_int = as_int >> 16
     return ~checksum & 0xFFFF
+
+
+def print_table(rows):
+    num_fields = len(rows[0])
+    max_lengths = [0 for _ in range(num_fields)]
+
+    for row in rows:
+        assert len(row) == num_fields, 'Table has inconsistent number of fields'
+        max_lengths = [
+            max(len(row[i]), max_lengths[i]) for i in range(num_fields)
+        ]
+
+    field_format_strings = [
+        '{:' + '<{}'.format(max_lengths[i]) + '}' for i in range(num_fields)
+    ]
+    row_format_string = '\t\t'.join(field_format_strings)
+
+    for row in rows:
+        print(row_format_string.format(*row))
