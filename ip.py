@@ -11,6 +11,7 @@ from util import checksum
 from util import get_default_route_info
 from util import get_ip
 from util import get_mac
+from util import human_readable_ip_to_int
 
 
 IP_FLAGS_DONT_FRAGMENT = 0b010
@@ -107,12 +108,14 @@ class IpPacket:
         return self._pack_header() + self.payload
 
 
-def send_ip_packet(sock, protocol, destination_ip, payload, flags=None):
-    # TODO: this could maybe do longest prefix match to choose an interface
-    # although then we would have to bind the socket here
-    default_interface, gateway_ip = get_default_route_info()
-    source_ip = get_ip(default_interface)
-    gateway_mac = arp_lookup_for_ip(sock=sock, ip=gateway_ip)
+def send_ip_packet(sock, protocol, destination_ip, payload, flags=0):
+    if destination_ip >> 24 == 127:
+        source_ip = human_readable_ip_to_int('127.0.0.1')
+        destination_mac = 0
+    else:
+        default_interface, gateway_ip = get_default_route_info()
+        source_ip = get_ip(default_interface)
+        destination_mac = arp_lookup_for_ip(sock=sock, ip=gateway_ip)
 
     packet = IpPacket(
         protocol=protocol,
@@ -121,7 +124,7 @@ def send_ip_packet(sock, protocol, destination_ip, payload, flags=None):
         flags=flags,
         payload=payload,
     )
-    send_ethernet_frame(sock, ETH_TYPE_IP, gateway_mac, packet.to_raw())
+    send_ethernet_frame(sock, ETH_TYPE_IP, destination_mac, packet.to_raw())
 
 
 def listen_for_ip_packets(

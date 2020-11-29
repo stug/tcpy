@@ -93,3 +93,22 @@ def checksum(byte_string):
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         as_int = as_int >> 16
     return ~checksum & 0xFFFF
+
+
+def print_table(rows):
+    num_fields = len(rows[0])
+    max_lengths = [0 for _ in range(num_fields)]
+
+    for row in rows:
+        assert len(row) == num_fields, 'Table has inconsistent number of fields'
+        max_lengths = [
+            max(len(row[i]), max_lengths[i]) for i in range(num_fields)
+        ]
+
+    field_format_strings = [
+        '{:' + '<{}'.format(max_lengths[i]) + '}' for i in range(num_fields)
+    ]
+    row_format_string = '\t\t'.join(field_format_strings)
+
+    for row in rows:
+        print(row_format_string.format(*row))

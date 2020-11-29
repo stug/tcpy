@@ -1,7 +1,9 @@
+import socket
 import struct
 from dataclasses import dataclass
 from dataclasses import field
 
+from ip import listen_for_ip_packets
 from ip import send_ip_packet
 
 
@@ -63,3 +65,26 @@ def send_udp_datagram(
         destination_ip=destination_ip,
         payload=datagram.to_raw(),
     )
+
+
+def listen_for_udp_datagrams(
+    sock,
+    source_ip=None,
+    source_port=None,
+    destination_port=None,
+):
+    for packet in listen_for_ip_packets(
+        sock,
+        source_ip=source_ip,
+        protocol=socket.IPPROTO_UDP,
+    ):
+        udp_datagram = UdpDatagram.from_raw(packet.payload)
+        if source_port is not None and udp_datagram.source_port != source_port:
+            continue
+        if (
+            destination_port is not None
+            and udp_datagram.destination_port != destination_port
+        ):
+            continue
+
+        yield udp_datagram

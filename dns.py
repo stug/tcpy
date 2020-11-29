@@ -1,6 +1,16 @@
+import random
+import socket
 import struct
 from dataclasses import dataclass
 
+from udp import send_udp_datagram
+from udp import listen_for_udp_datagrams
+from util import get_ip
+from util import human_readable_ip_from_int
+from util import human_readable_ip_to_int
+
+
+DNS_PORT = 53
 
 DNS_TYPE_A = 0x0001
 DNS_TYPE_CNAME = 0x0005
@@ -11,24 +21,24 @@ DNS_CLASS_IN = 0x0001  # internet addresses
 class DnsPacket:
     HEADER_FORMAT = '!HBBHHHH'
 
-    id: int  # TODO: autogenerate this
-    qr: int 
-    opcode: int
-    aa: bool
-    tc: bool
-    rd: bool
-    ra: bool
-    rcode: int
+    id: int = 0  # TODO: autogenerate
+    qr: int = 0  # question
+    opcode: int = 0  # standard query
+    aa: bool = False  # authoritative answer
+    tc: bool = False  # truncated
+    rd: bool = True  # recursion desired
+    ra: bool = False  # recursion available
+    rcode: int = 0
     
-    qdcount: int
-    ancount: int
-    nscount: int
-    arcount: int
+    qdcount: int = 0
+    ancount: int = 0
+    nscount: int = 0
+    arcount: int = 0
 
-    questions: list
-    answers: list
-    authorities: list
-    additional: list
+    questions: list = None
+    answers: list = None
+    authorities: list = None
+    additional: list = None
 
     @classmethod
     def from_raw(cls, raw_packet):
@@ -80,8 +90,43 @@ class DnsPacket:
             additional=additional,
         )
 
+    def __post_init__(self):
+        if self.id == 0:
+            self.id = random.getrandbits(16)
+
+        self.qdcount = len(self.questions or [])
+        self.ancount = len(self.answers or [])
+        self.nscount = len(self.authorities or [])
+        self.arcount = len(self.additional or [])
+
     def to_raw(self):
-        raise NotImplementedError
+        assert (self.ancount + self.nscount + self.arcount) == 0, \
+            'Cannot serialize a dns packet with answer, authorities, or ' \
+            'additional sections'
+
+        qr_opcode_aa_tc_rd = self.qr << 7
+        qr_opcode_aa_tc_rd += (self.opcode << 3)
+        qr_opcode_aa_tc_rd += (int(self.aa) << 2)
+        qr_opcode_aa_tc_rd += (int(self.tc) << 1)
+        qr_opcode_aa_tc_rd += int(self.rd)
+
+        ra_rcode = (int(self.ra) << 7) + self.rcode
+
+        raw_packet = struct.pack(
+            self.HEADER_FORMAT,
+            self.id,
+            qr_opcode_aa_tc_rd,
+            ra_rcode,
+            self.qdcount,
+            self.ancount,
+            self.nscount,
+            self.arcount,
+        )
+        for question in self.questions:
+            raw_packet += question.to_raw()
+
+        return raw_packet
+
 
 
 def parse_resource_records(raw_dns_packet, count, index):
@@ -126,6 +171,17 @@ def parse_dns_name(raw_dns_packet, index):
     return b'.'.join(labels), index
 
 
+def create_dns_name(name):
+    dns_name = b''
+    labels = name.split('.')
+    for label in labels:
+        length = len(label)
+        dns_name += length.to_bytes(1, byteorder='big', signed=False)
+        dns_name += label.encode('utf-8')
+
+    return dns_name + b'\x00'
+
+
 @dataclass
 class DnsQuestionSection:
     record_name: bytes
@@ -134,7 +190,7 @@ class DnsQuestionSection:
 
     @classmethod
     def from_raw(cls, raw_dns_packet, index):
-        # because DNS packet only specify a domain name once and thereafter
+        # because DNS packets only specify a domain name once and thereafter
         # refer to it via a pointer to the original name, we need access to the
         # entire DNS packet in case we need to look up a name defined elsewhere
         record_name, index = parse_dns_name(raw_dns_packet, index)
@@ -149,7 +205,11 @@ class DnsQuestionSection:
         return question_section, index
 
     def to_raw(self):
-        raise NotImplementedError
+        # this is simplistic and does not implement that label/pointer business
+        # since we only expect to do a single lookup at a time
+        name = create_dns_name(self.record_name)
+        type_and_class = struct.pack('!HH', self.record_type, self.record_class)
+        return name + type_and_class
 
 
 @dataclass
@@ -180,3 +240,61 @@ class DnsResourceRecord:
             rdata=rdata
         )
         return resource_record, index
+
+
+def get_nameserver_ip():
+    # This is a little bonkers because of systemd, which sets up /etc/resolv.conf
+    # to only list a 127.0.0.53 nameserver, which is just served by a local
+    # cache of DNS results. The real nameserver is available by running
+    # `resolvectl status`, and it appears systemd also stores it in
+    # /run/systemd/resolve/resolv.conf for programs to read, but I am not sure
+    # how generalizable this is :-/
+    with open('/run/systemd/resolve/resolv.conf') as f:
+        for line in f:
+            if line.startswith('nameserver '):
+                human_ip = line[len('nameserver '):]
+                return human_readable_ip_to_int(human_ip)
+
+    raise Exception('Could not determine nameserver!')
+
+
+def perform_dns_lookup(sock, name, record_type):
+    nameserver_ip = get_nameserver_ip()
+    question = DnsQuestionSection(
+        record_name=name,
+        record_type=record_type,
+        record_class=DNS_CLASS_IN,
+    )
+    dns_packet = DnsPacket(questions=[question])
+
+    interface = sock.getsockname()[0]
+    source_ip = get_ip(interface)
+
+    # this socket is just so that we can get an ephemeral port to use as a
+    # source port
+    with socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) as udp_sock:
+        udp_sock.bind((human_readable_ip_from_int(source_ip), 0))
+        source_port = udp_sock.getsockname()[1]
+        send_udp_datagram(
+            sock=sock,
+            source_port=source_port,
+            destination_ip=nameserver_ip,
+            destination_port=DNS_PORT,
+            payload=dns_packet.to_raw(),
+        )
+        for udp_datagram in listen_for_udp_datagrams(
+            sock=sock,
+            source_ip=nameserver_ip,
+            source_port=DNS_PORT,
+            destination_port=source_port,
+        ):
+            dns_packet = DnsPacket.from_raw(udp_datagram.payload)
+
+            assert dns_packet.qr == 1  # response
+            assert not dns_packet.tc, 'Cannot handle truncated DNS responses'
+            assert dns_packet.ra, \
+                'Can only handle responses from nameservers supporting recursion'
+            assert dns_packet.rcode in (0, 3), \
+                f'Received error in DNS response rcode field: {dns_packet.rcode}'
+
+            return dns_packet
