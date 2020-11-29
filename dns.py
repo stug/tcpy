@@ -298,3 +298,11 @@ def perform_dns_lookup(sock, name, record_type):
                 f'Received error in DNS response rcode field: {dns_packet.rcode}'
 
             return dns_packet
+
+
+def get_ip_for_name(sock, name):
+    response = perform_dns_lookup(sock, name, DNS_TYPE_A)
+    for answer in response.answers:
+        if answer.record_type == DNS_TYPE_A:
+            return int.from_bytes(answer.rdata, byteorder='big', signed=False)
+    return None

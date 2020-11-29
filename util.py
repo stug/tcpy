@@ -1,4 +1,5 @@
 import fcntl
+import re
 import socket
 import struct
 
@@ -35,6 +36,11 @@ def human_readable_ip_to_int(ip_address):
     # because ip addresses represented as 4 octets are already in network order,
     # we can just return here
     return ip
+
+
+def is_ip_string(string):
+    match = re.match('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', string)
+    return match is not None
 
 
 # TODO: everything from here on down in this file could do with some caching

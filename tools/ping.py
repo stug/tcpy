@@ -2,6 +2,7 @@ import socket
 import sys
 import time
 
+from dns import get_ip_for_name
 from ethernet import ETH_P_ALL
 from icmp import ICMP_TYPE_ECHO_REPLY
 from icmp import ICMP_TYPE_ECHO_REQUEST
@@ -13,6 +14,8 @@ from ip import IpPacket
 from ip import IP_FLAGS_DONT_FRAGMENT
 from util import get_default_route_info
 from util import human_readable_ip_to_int
+from util import human_readable_ip_from_int
+from util import is_ip_string
 
 
 def ping(host):
@@ -25,7 +28,12 @@ def ping(host):
     default_interface, gateway_ip = get_default_route_info()
     sock.bind((default_interface, 0))
 
-    destination_host_ip = human_readable_ip_to_int(host)
+    if is_ip_string(host):
+        destination_host_ip = human_readable_ip_to_int(host)
+        human_readable_ip = host
+    else:
+        destination_host_ip = get_ip_for_name(sock, host)
+        human_readable_ip = human_readable_ip_from_int(destination_host_ip)
 
     request_icmp_datagram = IcmpDatagram(
         type=ICMP_TYPE_ECHO_REQUEST,
@@ -36,7 +44,7 @@ def ping(host):
         payload=int(time.time() * 1000).to_bytes(32, byteorder='big'),
     )
 
-    print('PING!')
+    print(f'Pinging {human_readable_ip}')
     send_ip_packet(
         sock=sock,
         protocol=socket.IPPROTO_ICMP,
