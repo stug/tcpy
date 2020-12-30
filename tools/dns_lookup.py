@@ -7,21 +7,13 @@ from dns import perform_dns_lookup
 from dns import DNS_TYPE_A
 from dns import DNS_TYPE_CNAME
 from dns import DNS_TYPE_PTR
-from ethernet import ETH_P_ALL
-from util import get_default_route_info
+from util import get_raw_af_packet_socket
 from util import is_ip_string
 from util import print_table
 
 
 def dns_lookup(name):
-    # raw AF_PACKET socket gets raw link layer frames -- requires sudo
-    sock = socket.socket(
-        family=socket.AF_PACKET,
-        type=socket.SOCK_RAW,
-        proto=socket.htons(ETH_P_ALL),
-    )
-    default_interface, gateway_ip = get_default_route_info()
-    sock.bind((default_interface, 0))
+    sock = get_raw_af_packet_socket()
 
     name = name.strip()
     if is_ip_string(name):

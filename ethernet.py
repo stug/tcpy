@@ -8,10 +8,6 @@ from util import get_ip
 from util import get_mac
 
 
-# used to specify the protocol for a raw AF_PACKET socket -- tells it to give us
-# ALL incoming frames (e.g. not just IP)
-ETH_P_ALL = 0x3
-
 ETH_TYPE_IP = 0x0800
 ETH_TYPE_ARP = 0x0806
 

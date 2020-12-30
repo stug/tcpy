@@ -15,6 +15,10 @@ SIOCGIFADDR = 0x00008915
 # in the if.h kernel header -- not sure if it varies with architecture.
 IFNAMSIZ = 16
 
+# used to specify the protocol for a raw AF_PACKET socket -- tells it to give us
+# ALL incoming frames (e.g. not just IP)
+ETH_P_ALL = 0x3
+
 
 def human_readable_ip_from_int(ip_int):
     # convert back to network byte order first so that the octets are in the
@@ -118,3 +122,15 @@ def print_table(rows):
 
     for row in rows:
         print(row_format_string.format(*row))
+
+
+def get_raw_af_packet_socket():
+    # raw AF_PACKET socket gets raw link layer frames -- requires sudo
+    sock = socket.socket(
+        family=socket.AF_PACKET,
+        type=socket.SOCK_RAW,
+        proto=socket.htons(ETH_P_ALL),
+    )
+    default_interface, gateway_ip = get_default_route_info()
+    sock.bind((default_interface, 0))
+    return sock

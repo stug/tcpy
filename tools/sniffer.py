@@ -1,21 +1,16 @@
 import socket
 
 from dns import DnsPacket
-from ethernet import ETH_TYPE_IP
 from ethernet import EthernetFrame
 from icmp import IcmpDatagram
 from ip import IpPacket
 from tcp import TcpSegment
 from udp import UdpDatagram
+from util import get_raw_af_packet_socket
 
 
 def main():
-    # raw AF_PACKET socket gets raw link layer frames -- requires sudo
-    sock = socket.socket(
-        family=socket.AF_PACKET,
-        type=socket.SOCK_RAW,
-        proto=socket.htons(ETH_TYPE_IP),
-    )
+    sock = get_raw_af_packet_socket()
     
     # TODO: make this print things more nicely
     while True:
