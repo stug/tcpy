@@ -66,7 +66,7 @@ def get_default_route_info():
                 return interface, gateway_ip
 
 
-def get_ip(interface):
+def get_interface_ip(interface):
     interface_ascii = interface.encode('ascii')
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         # `man 7 netdevice` explains this struct and ioctl request
@@ -81,7 +81,7 @@ def get_ip(interface):
         return int.from_bytes(fields[3], byteorder='big')
 
 
-def get_mac(interface):
+def get_interface_mac(interface):
     interface_ascii = interface.encode('ascii')
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         # `man 7 netdevice` explains this struct and ioctl request

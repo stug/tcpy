@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from util import get_default_route_info
-from util import get_ip
-from util import get_mac
+from util import get_interface_ip
+from util import get_interface_mac
 
 
 ETH_TYPE_IP = 0x0800
@@ -117,7 +117,7 @@ class ArpPacket:
 
 def send_ethernet_frame(sock, ethertype, destination_mac, payload):
     interface = sock.getsockname()[0]
-    source_mac = get_mac(interface)
+    source_mac = get_interface_mac(interface)
     frame = EthernetFrame(
         destination_mac=destination_mac,
         source_mac=source_mac,
@@ -131,8 +131,8 @@ def send_ethernet_frame(sock, ethertype, destination_mac, payload):
 def arp_lookup_for_ip(sock, ip):
     """sock must be a RAW AF_PACKET socket.  ip must be an int"""
     interface = sock.getsockname()[0]
-    source_mac = get_mac(interface)
-    source_ip = get_ip(interface)
+    source_mac = get_interface_mac(interface)
+    source_ip = get_interface_ip(interface)
     arp_packet = ArpPacket(
         operation=ARP_OPERATION_REQUEST,
         sender_hardware_address=source_mac,

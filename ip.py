@@ -9,8 +9,7 @@ from ethernet import EthernetFrame
 from ethernet import ETH_TYPE_IP
 from util import checksum
 from util import get_default_route_info
-from util import get_ip
-from util import get_mac
+from util import get_interface_ip
 from util import human_readable_ip_to_int
 
 
@@ -114,7 +113,7 @@ def send_ip_packet(sock, protocol, destination_ip, payload, flags=0):
         destination_mac = 0
     else:
         default_interface, gateway_ip = get_default_route_info()
-        source_ip = get_ip(default_interface)
+        source_ip = get_interface_ip(default_interface)
         destination_mac = arp_lookup_for_ip(sock=sock, ip=gateway_ip)
 
     packet = IpPacket(

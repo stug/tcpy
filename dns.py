@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from udp import send_udp_datagram
 from udp import listen_for_udp_datagrams
-from util import get_ip
+from util import get_interface_ip
 from util import human_readable_ip_from_int
 from util import human_readable_ip_to_int
 
@@ -269,7 +269,7 @@ def perform_dns_lookup(sock, name, record_type):
     dns_packet = DnsPacket(questions=[question])
 
     interface = sock.getsockname()[0]
-    source_ip = get_ip(interface)
+    source_ip = get_interface_ip(interface)
 
     # this socket is just so that we can get an ephemeral port to use as a
     # source port
