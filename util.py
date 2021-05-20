@@ -50,20 +50,34 @@ def is_ip_string(string):
 # TODO: everything from here on down in this file could do with some caching
 
 
-def get_default_route_info():
+def get_route_info(destination_ip):
+    # does longest prefix match to find the outgoing route's interface and
+    # gateway ip for the destination_ip
     # this requires root
-    # adapted from https://stackoverflow.com/questions/2761829/python-get-default-gateway-for-a-local-interface-ip-address-in-linux
     with open('/proc/net/route') as f:
+        best_interface_and_ip = (None, None)
+        best_mask = -1
+        f.readline()  # burn the header row
         for line in f:
             fields = line.strip().split()
-            # fields[1] is the destination, so all 0 means the default route.
+            # fields[0] is the interface
+            # fields[1] is the destination, and all 0 means the default route.
+            # fields[2] is the gateway ip
             # fields[3] is the flags field, and the 2s bit is the RTF_GATEWAY flag
-            if fields[1] == '00000000' and int(fields[3]) & 2 != 0:
-                interface = fields[0]
-                # /proc/net/route has the gateway as little-endian hex string
-                gateway_hex = fields[2]
-                gateway_ip = socket.htonl(int(gateway_hex, 16))
-                return interface, gateway_ip
+            # fields[7] is the mask for the route
+            gateway_ip = socket.htonl(int(fields[2], 16))
+            mask = socket.htonl(int(fields[7], 16))
+            route_destination = socket.htonl(int(fields[1], 16))
+            masked_destination_ip = destination_ip & mask
+            masked_route_destination = route_destination & mask
+            if (
+                masked_destination_ip == masked_route_destination
+                and mask > best_mask
+            ):
+                best_interface_and_ip = (fields[0], gateway_ip)
+                best_mask = mask
+
+        return best_interface_and_ip
 
 
 def get_interface_ip(interface):
@@ -131,6 +145,7 @@ def get_raw_af_packet_socket():
         type=socket.SOCK_RAW,
         proto=socket.htons(ETH_P_ALL),
     )
-    default_interface, gateway_ip = get_default_route_info()
+    # getting the route info for ip 0.0.0.0 gives us the default route
+    default_interface, gateway_ip = get_route_info(0)
     sock.bind((default_interface, 0))
     return sock
