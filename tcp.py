@@ -49,7 +49,7 @@ class TcpSegment:
     rst: bool = False
     syn: bool = False
     fin: bool = False
-    window_size: int = 1  # TODO
+    window_size: int = 100  # TODO
     checksum: int = 0
     urgent_pointer: int = 0
     options: bytes = b''
@@ -167,9 +167,11 @@ class TcpConnection:
         self.destination_ip = destination_ip
         self.destination_port = destination_port
 
+        self.window_size = 65535
+
         self._next_sequence_number = random.getrandbits(32)
         self.other_sequence_number = None
-        self.last_acked = None
+        self.last_acked_by_them = None
         self.state = TcpState.CLOSED
 
     def _send_segment(self, tcp_segment):
@@ -186,7 +188,7 @@ class TcpConnection:
 
         sequence_number_increment = len(payload)
         if sequence_number_increment == 0:
-            # sequence number is expected to increment by for SYN and FIN
+            # sequence number is expected to increment by 1 for SYN and FIN
             # segments even if they are empty
             if kwargs.get('syn', False) or kwargs.get('fin', False):
                 sequence_number_increment = 1
@@ -197,6 +199,7 @@ class TcpConnection:
             source_port=self.source_port,
             destination_ip=self.destination_ip,
             destination_port=self.destination_port,
+            window_size=self.window_size,  # TODO: sliding window
             sequence_number=sequence_number,
             **kwargs,
         )
@@ -227,6 +230,7 @@ class TcpConnection:
         ) as tcp_sock:
             tcp_sock.bind((human_readable_ip_from_int(self.source_ip), 0))
             self.source_port = tcp_sock.getsockname()[1]
+            print(f'source port {self.source_port}')
 
             with _block_tcp_port(self.source_port):
                 syn_segment = self._make_segment(syn=True)
@@ -310,9 +314,12 @@ class TcpConnection:
             raise Exception(f'Got unexpected response to SYN: {received_segment}')
         if received_segment.ack:
             # TODO: validate that the ACK is for the SYN
-            self.last_acked = max(received_segment.ack_number, self.last_acked or 0)
+            self.last_acked_by_them = max(
+                received_segment.ack_number,
+                self.last_acked_by_them or 0,
+            )
         if received_segment.syn:
-            if self.last_acked is None:
+            if self.last_acked_by_them is None:
                 raise Exception(
                     'Received SYN in response to SYN.  Cannot currently '
                     'handle simultaneous open.'
@@ -343,10 +350,16 @@ class TcpConnection:
             # TODO: is it possible to get FIN and ACK?
             if received_segment.ack:
                 # TODO: set a timer?
-                self.last_acked = max(received_segment.ack_number, self.last_acked or 0)
+                self.last_acked_by_them = max(
+                    received_segment.ack_number,
+                    self.last_acked_by_them or 0,
+                )
                 self.state = TcpState.TIME_WAIT
         elif received_segment.ack:
-            self.last_acked = max(received_segment.ack_number, self.last_acked or 0)
+            self.last_acked_by_them = max(
+                received_segment.ack_number,
+                self.last_acked_by_them or 0,
+            )
             self.state = TcpState.FIN_WAIT_2
         else:
             raise Exception(
@@ -367,7 +380,10 @@ class TcpConnection:
     def _handle_closing(self, received_segment):
         # TODO: validate that ACK is for FIN
         if received_segment.ack:
-            self.last_acked = max(received_segment.ack_number, self.last_acked or 0)
+            self.last_acked_by_them = max(
+                received_segment.ack_number,
+                self.last_acked_by_them or 0,
+            )
             self.state = TcpState.TIME_WAIT  # TODO: set a timer?
 
     def _handle_close_wait(self, received_segment):
@@ -379,7 +395,10 @@ class TcpConnection:
     def _handle_last_ack(self, received_segment):
         # TODO: validate ack number
         if received_segment.ack:
-            self.last_acked = max(received_segment.ack_number, self.last_acked or 0)
+            self.last_acked_by_them = max(
+                received_segment.ack_number,
+                self.last_acked_by_them or 0,
+            )
             self.state = TcpState.CLOSED
         else:
             raise Exception(

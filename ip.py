@@ -8,7 +8,7 @@ from ethernet import send_ethernet_frame
 from ethernet import EthernetFrame
 from ethernet import ETH_TYPE_IP
 from util import checksum
-from util import get_default_route_info
+from util import get_route_info
 from util import get_interface_ip
 from util import human_readable_ip_to_int
 
@@ -112,9 +112,14 @@ def send_ip_packet(sock, protocol, destination_ip, payload, flags=0):
         source_ip = human_readable_ip_to_int('127.0.0.1')
         destination_mac = 0
     else:
-        default_interface, gateway_ip = get_default_route_info()
-        source_ip = get_interface_ip(default_interface)
-        destination_mac = arp_lookup_for_ip(sock=sock, ip=gateway_ip)
+        interface, gateway_ip = get_route_info(destination_ip)
+        source_ip = get_interface_ip(interface)
+        # if the gateway_ip is 0, then we are on the same network as the
+        # destination_ip and can do an ARP lookup for its MAC address directly
+        destination_mac = arp_lookup_for_ip(
+            sock=sock,
+            ip=gateway_ip or destination_ip,
+        )
 
     packet = IpPacket(
         protocol=protocol,

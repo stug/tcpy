@@ -3,7 +3,6 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
-from util import get_default_route_info
 from util import get_interface_ip
 from util import get_interface_mac
 
