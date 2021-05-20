@@ -1,12 +1,12 @@
 import socket
 
-from dns import DnsPacket
-from ethernet import EthernetFrame
-from icmp import IcmpDatagram
-from ip import IpPacket
-from tcp import TcpSegment
-from udp import UdpDatagram
-from util import get_raw_af_packet_socket
+from tcpy.dns import DnsPacket
+from tcpy.ethernet import EthernetFrame
+from tcpy.icmp import IcmpDatagram
+from tcpy.ip import IpPacket
+from tcpy.tcp import TcpSegment
+from tcpy.udp import UdpDatagram
+from tcpy.util import get_raw_af_packet_socket
 
 
 def main():

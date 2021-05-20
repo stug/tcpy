@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
 
-from ip import send_ip_packet
-from ip import listen_for_ip_packets
-from util import checksum
-from util import get_interface_ip  # TODO: remove when hack below is gone
-from util import human_readable_ip_from_int
+from tcpy.ip import send_ip_packet
+from tcpy.ip import listen_for_ip_packets
+from tcpy.util import checksum
+from tcpy.util import get_interface_ip  # TODO: remove when hack below is gone
+from tcpy.util import human_readable_ip_from_int
 
 
 class TcpState(Enum):

@@ -3,8 +3,8 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
-from ip import listen_for_ip_packets
-from ip import send_ip_packet
+from tcpy.ip import listen_for_ip_packets
+from tcpy.ip import send_ip_packet
 
 
 @dataclass

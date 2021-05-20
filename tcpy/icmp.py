@@ -2,7 +2,7 @@ import random
 import struct
 from dataclasses import dataclass
 
-from util import checksum
+from tcpy.util import checksum
 
 
 ICMP_TYPE_ECHO_REPLY = 0

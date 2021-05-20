@@ -3,8 +3,8 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
-from util import get_interface_ip
-from util import get_interface_mac
+from tcpy.util import get_interface_ip
+from tcpy.util import get_interface_mac
 
 
 ETH_TYPE_IP = 0x0800

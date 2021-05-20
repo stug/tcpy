@@ -2,19 +2,19 @@ import socket
 import sys
 import time
 
-from dns import get_ip_for_name
-from icmp import ICMP_TYPE_ECHO_REPLY
-from icmp import ICMP_TYPE_ECHO_REQUEST
-from icmp import IcmpDatagram
-from icmp import IcmpEchoRequestHeaderFields
-from ip import listen_for_ip_packets
-from ip import send_ip_packet
-from ip import IpPacket
-from ip import IP_FLAGS_DONT_FRAGMENT
-from util import get_raw_af_packet_socket
-from util import human_readable_ip_to_int
-from util import human_readable_ip_from_int
-from util import is_ip_string
+from tcpy.dns import get_ip_for_name
+from tcpy.icmp import ICMP_TYPE_ECHO_REPLY
+from tcpy.icmp import ICMP_TYPE_ECHO_REQUEST
+from tcpy.icmp import IcmpDatagram
+from tcpy.icmp import IcmpEchoRequestHeaderFields
+from tcpy.ip import listen_for_ip_packets
+from tcpy.ip import send_ip_packet
+from tcpy.ip import IpPacket
+from tcpy.ip import IP_FLAGS_DONT_FRAGMENT
+from tcpy.util import get_raw_af_packet_socket
+from tcpy.util import human_readable_ip_to_int
+from tcpy.util import human_readable_ip_from_int
+from tcpy.util import is_ip_string
 
 
 def ping(host):

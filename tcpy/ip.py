@@ -3,14 +3,14 @@ import struct
 from dataclasses import dataclass
 from dataclasses import field
 
-from ethernet import arp_lookup_for_ip
-from ethernet import send_ethernet_frame
-from ethernet import EthernetFrame
-from ethernet import ETH_TYPE_IP
-from util import checksum
-from util import get_route_info
-from util import get_interface_ip
-from util import human_readable_ip_to_int
+from tcpy.ethernet import arp_lookup_for_ip
+from tcpy.ethernet import send_ethernet_frame
+from tcpy.ethernet import EthernetFrame
+from tcpy.ethernet import ETH_TYPE_IP
+from tcpy.util import checksum
+from tcpy.util import get_route_info
+from tcpy.util import get_interface_ip
+from tcpy.util import human_readable_ip_to_int
 
 
 IP_FLAGS_DONT_FRAGMENT = 0b010

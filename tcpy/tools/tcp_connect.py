@@ -1,8 +1,8 @@
 import sys
 
-from tcp import TcpConnection
-from util import get_raw_af_packet_socket
-from util import human_readable_ip_to_int
+from tcpy.tcp import TcpConnection
+from tcpy.util import get_raw_af_packet_socket
+from tcpy.util import human_readable_ip_to_int
 
 
 def main(destination_ip, destination_port):

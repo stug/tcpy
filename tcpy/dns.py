@@ -3,11 +3,11 @@ import socket
 import struct
 from dataclasses import dataclass
 
-from udp import send_udp_datagram
-from udp import listen_for_udp_datagrams
-from util import get_interface_ip
-from util import human_readable_ip_from_int
-from util import human_readable_ip_to_int
+from tcpy.udp import send_udp_datagram
+from tcpy.udp import listen_for_udp_datagrams
+from tcpy.util import get_interface_ip
+from tcpy.util import human_readable_ip_from_int
+from tcpy.util import human_readable_ip_to_int
 
 
 DNS_PORT = 53

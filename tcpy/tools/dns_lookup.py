@@ -1,15 +1,15 @@
 import socket
 import sys
 
-from dns import human_readable_ip_to_arpa_domain
-from dns import parse_dns_name
-from dns import perform_dns_lookup
-from dns import DNS_TYPE_A
-from dns import DNS_TYPE_CNAME
-from dns import DNS_TYPE_PTR
-from util import get_raw_af_packet_socket
-from util import is_ip_string
-from util import print_table
+from tcpy.dns import human_readable_ip_to_arpa_domain
+from tcpy.dns import parse_dns_name
+from tcpy.dns import perform_dns_lookup
+from tcpy.dns import DNS_TYPE_A
+from tcpy.dns import DNS_TYPE_CNAME
+from tcpy.dns import DNS_TYPE_PTR
+from tcpy.util import get_raw_af_packet_socket
+from tcpy.util import is_ip_string
+from tcpy.util import print_table
 
 
 def dns_lookup(name):
