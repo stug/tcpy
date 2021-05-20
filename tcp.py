@@ -151,9 +151,11 @@ def _block_tcp_port(port_number):
     ]
     append_cmd = ['iptables', '-A' 'INPUT'] + iptables_rule
     append_result = subprocess.run(append_cmd, capture_output=True)
-    yield
-    delete_cmd = ['iptables', '-D', 'INPUT'] + iptables_rule
-    delete_result = subprocess.run(delete_cmd, capture_output=True)
+    try:
+        yield
+    finally:
+        delete_cmd = ['iptables', '-D', 'INPUT'] + iptables_rule
+        delete_result = subprocess.run(delete_cmd, capture_output=True)
 
 
 class TcpConnection:
@@ -236,6 +238,14 @@ class TcpConnection:
 
     def listen(self):
         raise NotImplementedError
+
+    def send(self, data):
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        assert isinstance(data, bytes), 'TcpConnection can only send str, bytes'
+
+        segment = self._make_segment(payload=data, psh=True)
+        self._send_segment(segment)
 
     def close(self):
         # TODO: handle checking last_acked before sending?
