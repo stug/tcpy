@@ -280,7 +280,6 @@ class TcpConnection:
 
         for received_segment in self._listen_for_segments():
             # TODO: make sure we aren't falling behind
-            # TODO: TIME_WAIT?
             self.other_sequence_number = received_segment.sequence_number
             if self.state == TcpState.SYN_SENT:
                 self._handle_syn_sent(received_segment)
@@ -299,15 +298,15 @@ class TcpConnection:
             else:
                 raise Exception(f'Cannot handle state {self.state}')
 
-            if self.state == desired_state:
-                return
-
             if self.state == TcpState.TIME_WAIT:
                 # Sockets usually wait around a minute before moving closing,
                 # but given that this is implemented so that each program runs
                 # its own TCP state machine, we don't want to wait 60s before
                 # ending the program
-                self.state == TcpState.CLOSED
+                self.state = TcpState.CLOSED
+
+            if self.state == desired_state:
+                return
 
     def _handle_syn_sent(self, received_segment):
         if not received_segment.ack and not received_segment.syn:
@@ -347,9 +346,7 @@ class TcpConnection:
             self._ack_received_segment(received_segment)
             self.state = TcpState.CLOSING
 
-            # TODO: is it possible to get FIN and ACK?
             if received_segment.ack:
-                # TODO: set a timer?
                 self.last_acked_by_them = max(
                     received_segment.ack_number,
                     self.last_acked_by_them or 0,

@@ -14,10 +14,9 @@ def main(destination_ip, destination_port):
         destination_port=int(destination_port),
     )
     with tcp_connection.connect():
-        import ipdb; ipdb.set_trace()
-        print('established connection!')
+        print('Connected!  Now closing connection!')
 
-    print('closed connection!')
+    print('Closed!')
 
 
 main(sys.argv[1], sys.argv[2])
