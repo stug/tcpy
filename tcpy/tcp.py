@@ -172,6 +172,7 @@ class TcpConnection:
         self._next_sequence_number = random.getrandbits(32)
         self.other_sequence_number = None
         self.last_acked_by_them = None
+        self.last_acked_by_us = 0
         self.state = TcpState.CLOSED
 
     def _send_segment(self, tcp_segment):
@@ -201,14 +202,19 @@ class TcpConnection:
             destination_port=self.destination_port,
             window_size=self.window_size,  # TODO: sliding window
             sequence_number=sequence_number,
+            ack_number=self.last_acked_by_us,
+            ack=self.last_acked_by_us > 0,
             **kwargs,
         )
 
     def _ack_received_segment(self, received_segment):
-        ack_segment = self._make_segment(
-            ack=True,
-            ack_number=received_segment.sequence_number + 1,
-        )
+        print(f'acking segment {received_segment}')
+        self.last_acked_by_us = received_segment.sequence_number + \
+            len(received_segment.payload) + 1
+
+        # we always ack as long as self.last_acked_by_us > 0, so just send a
+        # segment
+        ack_segment = self._make_segment()
         self._send_segment(ack_segment)
 
     def _listen_for_segments(self):
@@ -219,7 +225,12 @@ class TcpConnection:
             protocol=socket.IPPROTO_TCP,
         ):
             received_segment = TcpSegment.from_raw(packet.payload)
+            print(f'Received segment inside tcp code with payload: {received_segment.payload}')
             if received_segment.destination_port == self.source_port:
+                if received_segment.rst:
+                    raise Exception(
+                        f'Other side sent RST!  Full packet: {received_segment}',
+                    )
                 yield received_segment
 
     @contextmanager
@@ -230,7 +241,6 @@ class TcpConnection:
         ) as tcp_sock:
             tcp_sock.bind((human_readable_ip_from_int(self.source_ip), 0))
             self.source_port = tcp_sock.getsockname()[1]
-            print(f'source port {self.source_port}')
 
             with _block_tcp_port(self.source_port):
                 syn_segment = self._make_segment(syn=True)
@@ -250,6 +260,13 @@ class TcpConnection:
 
         segment = self._make_segment(payload=data, psh=True)
         self._send_segment(segment)
+
+    def receive(self):
+        for received_segment in self._listen_for_segments():
+            if received_segment.fin:
+                self.state = TcpState.CLOSE_WAIT
+            self._ack_received_segment(received_segment)
+            yield received_segment.payload
 
     def close(self):
         # TODO: handle checking last_acked before sending?
