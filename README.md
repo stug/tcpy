@@ -9,10 +9,13 @@ Currently working
 * DNS lookups
 * basic TCP connection active opening and closing
 
+In progress
+* HTTP (I can send requests, but something is wrong with putting together responses
+composed of multiple packets
+
 Next goals
 * Traceroute
 * IPv6
-
 
 ## Some interesting things I learned doing this
 * The network interface hardware often does its own TCP checksums and segmentation,
